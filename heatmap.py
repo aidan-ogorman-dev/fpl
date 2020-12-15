@@ -44,7 +44,7 @@ def plotHeatmap(gameweek, nweeks):
     fixtures_df = downloadFixtures()
     sns.set(rc={'figure.figsize':(11.7,8.27)})
 
-    df = fixtures_df[(fixtures_df['gameweek']<=gameweek+nweeks) & (fixtures_df['gameweek'] > gameweek)]
+    df = fixtures_df[(fixtures_df['gameweek']<gameweek+nweeks) & (fixtures_df['gameweek'] >= gameweek)]
     df = df.pivot(index = 'team', columns='gameweek', values='difficulty')
 
     value_to_int = {j:i for i,j in enumerate(pd.unique(df.values.ravel()))} # like you did
@@ -54,5 +54,5 @@ def plotHeatmap(gameweek, nweeks):
     colors = colors[-n:]
     diverging_colors = sns.color_palette(colors, n_colors=n, desat=0.8)
 
-    sns.heatmap(df, cmap=diverging_colors, annot=True)
+    sns.heatmap(df, cmap=diverging_colors, annot=True, cbar=False)
     plt.show()
