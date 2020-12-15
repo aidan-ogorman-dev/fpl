@@ -13,3 +13,4 @@ Type "help", "copyright", "credits" or "license" for more information.
 >>> from fpl import heatmap as hm
 >>> hm.plotHeatmap(1, 10)
 ```
+![FPL Heatmap Visualization](https://github.com/aidan-ogorman-dev/fpl/blob/main/images/fpl_heatmap.png)
