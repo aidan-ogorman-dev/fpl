@@ -39,13 +39,18 @@ def downloadFixtures():
     fixtures_df['gameweek'] = [i for i in range(1,39)] * 20
     return fixtures_df
 
-# Create a heatmap of fixture difficulty by team name for a given gameweek + number of weeks to look forward
-def plotHeatmap(gameweek, nweeks):
+def getFixtureHeatmap(gameweek, nweeks):
     fixtures_df = downloadFixtures()
-    sns.set(rc={'figure.figsize':(11.7,8.27)})
-
     df = fixtures_df[(fixtures_df['gameweek']<gameweek+nweeks) & (fixtures_df['gameweek'] >= gameweek)]
     df = df.pivot(index = 'team', columns='gameweek', values='difficulty')
+    return df
+
+
+# Create a heatmap of fixture difficulty by team name for a given gameweek + number of weeks to look forward
+def plotFixtureHeatmap(gameweek, nweeks):
+    sns.set(rc={'figure.figsize':(11.7,8.27)})
+
+    df = getFixtureHeatmap(gameweek, nweeks)
 
     value_to_int = {j:i for i,j in enumerate(pd.unique(df.values.ravel()))} # like you did
     n = len(value_to_int) 
@@ -56,3 +61,38 @@ def plotHeatmap(gameweek, nweeks):
 
     sns.heatmap(df, cmap=diverging_colors, annot=True, cbar=False)
     plt.show()
+
+# This function downloads fixture data, filters out historical matches and then creates a "difficulty matrix"
+# The difficulty matrix (DM) compares each team's fixture difficulty rating with all other teams for each GW.
+# We can then average this over N gameweeks and pick out teams with large 'difficulty deltas' i.e. teams whose
+# fixture difficulties complement each other
+def calculateDifficultyMatrix():
+    import heatmap as hm
+    import time
+    from datetime import datetime
+
+    fixtures = hm.downloadFixtures()
+    df = fixtures[fixtures['time'] > str(datetime.fromtimestamp(time.time()))].reset_index()
+    r = []
+    for i in range(0, len(df)):
+        diff = df['difficulty'][i]
+        data = df[df['gameweek'] == df['gameweek'][i]][['team','gameweek','difficulty']]
+        data['difficulty'] = data['difficulty'] - diff
+        r.append(data)
+
+    df['difficulty_matrix'] = r
+    return df
+
+# This function uses the difficulty matrices calculated above and filters based on a given team and number of gameweeks.
+# It returns the top 3 teams with 'complementary' fixtures i.e. teams playing easy fixtures when given team has a difficult one
+# and vice versa. We can use this to filter the heatmap we display
+def getComplementaryTeams(team, gameweeks_from_current=5):
+    df = calculateDifficultyMatrix()
+    gw = df[df['team'] == team]['gameweek'].iloc[0] + gameweeks_from_current
+    res = df[(df['gameweek'] < gw) & (df['team'] == team)]['difficulty_matrix']
+
+    difficulty_matrix = pd.DataFrame()
+    for i in range(0,len(res)):
+        difficulty_matrix = pd.concat([difficulty_matrix,res.iloc[i]])
+
+    return difficulty_matrix.groupby("team").mean().sort_values("difficulty", ascending=False).head(3)
